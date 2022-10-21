@@ -5,6 +5,7 @@
 #include <string>
 #include <type_traits>
 #include <vector>
+#include <unordered_map>
 
 #include "stringutils.h"
 
@@ -29,8 +30,7 @@ class CSV
   inline const_iterator cend() const { return cells_.cend(); }
   inline CSV &operator<<(const std::string &line)
   {
-    cells_.push_back(utils::StringUtils::split(line, ','));
-    return *this;
+    return *this << utils::StringUtils::split(line, ',');
   }
   inline CSV &operator<<(const row_type &line)
   {
@@ -43,14 +43,36 @@ class CSV
   inline size_type Columns() const { return Headers().size(); }
   inline row_type &Row(size_type i) { return cells_[i]; }
   inline const row_type &Row(size_type i) const { return cells_[i]; }
+  col_type Column(const std::string &header) const
+  {
+    return Column(Header(header));
+  }
   col_type Column(size_type i) const
   {
     col_type cols;
-    std::transform(
-        cbegin(), cend(), std::back_inserter(cols), [i](const row_type &row) {
-          return row[i];
-        });
+    if(i < Columns())
+    {
+      std::transform(
+          cbegin(), cend(), std::back_inserter(cols), [i](const row_type &row) {
+            return row[i];
+          });
+    }
     return cols;
+  }
+  template <
+      typename T,
+      typename = typename std::enable_if<std::is_arithmetic<T>::value>::type>
+  inline T Cell(size_type row, const std::string &header) const
+  {
+    return Cell<T>(row, Header(header));
+  }
+  inline cell_type &Cell(size_type row, const std::string &header)
+  {
+    return Cell(row, Header(header));
+  }
+  inline const cell_type &Cell(size_type row, const std::string &header) const
+  {
+    return Cell(row, Header(header));
   }
   template <
       typename T,
@@ -72,20 +94,31 @@ class CSV
   inline cell_type &Header(size_type i) { return Headers()[i]; }
   inline size_type Header(const std::string &name) const
   {
-    const auto &hdrs = Headers();
-    auto itr = std::find(hdrs.cbegin(), hdrs.cend(), name);
-    return (itr == hdrs.cend()) ? npos : std::distance(hdrs.cbegin(), itr);
+    // const auto &hdrs = Headers();
+    // auto itr = std::find(hdrs.cbegin(), hdrs.cend(), name);
+    auto itr = header_index_map_.find(name);
+    return (itr == header_index_map_.cend()) ? npos : itr->second;
   }
   inline bool HasHeader(const std::string &name) const
   {
     return Header(name) != npos;
   }
   inline const cell_type &Header(size_type i) const { return Headers()[i]; }
-  inline void PushBack(const row_type &row) { cells_.push_back(row); }
+  inline void PushBack(const row_type &row) { 
+    if(cells_.empty())
+    {
+      for(size_t i = 0, size = row.size(); i < size; i++)
+      {
+        header_index_map_[row[i]] = i;
+      }
+    }
+    cells_.push_back(row); 
+  }
   static CSV ParseFile(const std::string &filename);
   std::string Dump() const;
 
  private:
+  std::unordered_map<cell_type, size_type> header_index_map_;
   std::vector<row_type> cells_;
 };
 
