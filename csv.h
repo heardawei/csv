@@ -1,11 +1,10 @@
 #ifndef CSV_H
 #define CSV_H
 
-#include <fstream>
 #include <string>
 #include <type_traits>
-#include <vector>
 #include <unordered_map>
+#include <vector>
 
 #include "stringutils.h"
 
@@ -50,12 +49,12 @@ class CSV
   col_type Column(size_type i) const
   {
     col_type cols;
-    if(i < Columns())
+    if (i < Columns())
     {
-      std::transform(
-          cbegin(), cend(), std::back_inserter(cols), [i](const row_type &row) {
-            return row[i];
-          });
+      std::transform(cbegin(),
+                     cend(),
+                     std::back_inserter(cols),
+                     [i](const row_type &row) { return row[i]; });
     }
     return cols;
   }
@@ -104,15 +103,16 @@ class CSV
     return Header(name) != npos;
   }
   inline const cell_type &Header(size_type i) const { return Headers()[i]; }
-  inline void PushBack(const row_type &row) { 
-    if(cells_.empty())
+  inline void PushBack(const row_type &row)
+  {
+    if (cells_.empty())
     {
-      for(size_t i = 0, size = row.size(); i < size; i++)
+      for (size_t i = 0, size = row.size(); i < size; i++)
       {
         header_index_map_[row[i]] = i;
       }
     }
-    cells_.push_back(row); 
+    cells_.push_back(row);
   }
   static CSV ParseFile(const std::string &filename);
   std::string Dump() const;
